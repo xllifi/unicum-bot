@@ -1,0 +1,12 @@
+services:
+  unicumbot:
+    image: unicumbot
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    environment:
+      NODE_ENV: production
+    env_file:
+      - .env
+    ports:
+      - 6480:6480

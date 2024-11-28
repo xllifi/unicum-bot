@@ -1,0 +1,26 @@
+{
+  "name": "unicum-bot",
+  "version": "0.0.1",
+  "main": "index.ts",
+  "author": "xllifi",
+  "license": "ARR",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@yaireo/relative-time": "^1.0.5",
+    "consola": "^3.2.3",
+    "dotenv": "^16.4.5",
+    "ky": "^1.7.2",
+    "telegraf": "^4.16.3"
+  },
+  "scripts": {
+    "dev": "tsx ./src/index.ts",
+    "dev:watch": "tsx watch ./src/index.ts",
+    "build": "tsc && node ./dist/index.js"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  }
+}
