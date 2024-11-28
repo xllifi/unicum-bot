@@ -1,12 +1,12 @@
 import 'dotenv/config'
 import { createConsola } from 'consola'
 import { colors } from 'consola/utils'
-import pjson from '../package.json' with { type: 'json' }
-import { cacheRoot, Client } from './api.js'
+import pjson from './package.json' with { type: 'json' }
+import { cacheRoot, Client } from './src/api.js'
 import * as fsp from 'fs/promises'
 import path from 'path'
 import { Telegraf } from 'telegraf'
-import { escStr } from './utils.js'
+import { escStr } from './src/utils.js'
 
 const allowedUser = process.env.TELEGRAM_TRUSTED_USERNAME!
 

@@ -14,8 +14,8 @@
     "telegraf": "^4.16.3"
   },
   "scripts": {
-    "dev": "tsx ./src/index.ts",
-    "dev:watch": "tsx watch ./src/index.ts",
+    "dev": "tsx ./index.ts",
+    "dev:watch": "tsx watch ./index.ts",
     "build": "tsc && node ./dist/index.js"
   },
   "devDependencies": {
