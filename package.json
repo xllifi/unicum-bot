@@ -13,14 +13,11 @@
     "dotenv": "^16.4.5",
     "ky": "^1.7.2",
     "telegraf": "^4.16.3",
-    "typescript": "^5.7.2"
+    "tsx": "^4.19.2"
   },
   "scripts": {
     "dev": "tsx ./index.ts",
     "dev:watch": "tsx watch ./index.ts",
     "build": "tsc && node ./dist/index.js"
-  },
-  "devDependencies": {
-    "tsx": "^4.19.2"
   }
 }

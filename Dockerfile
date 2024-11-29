@@ -7,4 +7,4 @@ COPY . .
 EXPOSE 6480
 RUN chown -R node /app
 USER node
-CMD ["yarn", "build"]
+CMD ["yarn", "dev"]
