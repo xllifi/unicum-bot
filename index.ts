@@ -60,12 +60,15 @@ tbot.start(async (ctx) => {
 })
 
 tbot.command('getvends', async (ctx) => {
+  consola.start(`${ctx.from.username || 'Unknown user'} executed command /getvends! Handling...`)
   if (ctx.chat.id !== cachedUsers[allowedUser]) {
+    consola.fail(`${ctx.from.username || 'Unknown user'} is not allowed. Replying...`)
     return ctx.reply('Простите, вы нам не подходите')
   }
+  consola.info(`${ctx.from.username || 'Unknown user'} is allowed. Executing...`)
   const waitMessage = await ctx.sendMessage('Подождите, собираю данные...')
   await uclient.getVendsOver(3)
-    .then(async (res: { [key: number]: ProductJson[] }) => {
+  .then(async (res: { [key: number]: ProductJson[] }) => {
       const machineInfos: GetMachinesJson = await fsp.readFile(path.resolve(cacheRoot, 'latest_machineinfos.json'), { encoding: 'utf8' }).then((val) => JSON.parse(val))
 
       let message: string = 'Ячейки, продавшиеся более 3 раз\n'
@@ -78,6 +81,7 @@ tbot.command('getvends', async (ctx) => {
         }
         message = message + submessage
       }
+      consola.success(`Executed successfulyl and replied to ${ctx.from.username || 'unknown user'}!`)
       consola.debug(`Sending message: ${message.replaceAll('\n', '<br>')}`)
       ctx.telegram.editMessageText(waitMessage.chat.id, waitMessage.message_id, undefined, escStr(message), { parse_mode: 'MarkdownV2' })
     })
