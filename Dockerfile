@@ -7,6 +7,6 @@ RUN yarn && yarn global add typescript
 EXPOSE 6480
 RUN chown -R node /app
 COPY . .
-USER node
+USER root
 RUN tsc
 CMD ["node", "./dist/index.js"]
