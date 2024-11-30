@@ -5,7 +5,7 @@ services:
       context: .
       dockerfile: ./Dockerfile
     volumes:
-      - ./src:/app/src
+      - ./run:/app/run
     environment:
       NODE_ENV: production
     env_file:

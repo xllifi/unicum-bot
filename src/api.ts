@@ -109,13 +109,13 @@ export class Client {
   }
 
   async tokenStr(token: string, validUntil?: number): Promise<void> {
-    this.consola.debug(`Updating token to ${token}`)
     this.token = token
 
     let tokenFile: TokenFile = {
       token,
-      validUntil: validUntil || getUnix() + 39 * 60
+      validUntil: validUntil !== undefined ? validUntil : getUnix() + 39 * 60
     }
+    this.consola.debug(`Updated and cached token to ${tokenFile.token}. Valid until ${new Date(tokenFile.validUntil).toLocaleString('en-GB', { timeZone: process.env.TZ! })}`)
 
     await fsp.writeFile(tokenFilePath, JSON.stringify(tokenFile))
   }
