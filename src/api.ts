@@ -115,7 +115,7 @@ export class Client {
       token,
       validUntil: validUntil !== undefined ? validUntil : getUnix() + 39 * 60
     }
-    this.consola.debug(`Updated and cached token to ${tokenFile.token}. Valid until ${new Date(tokenFile.validUntil).toLocaleString('en-GB', { timeZone: process.env.TZ! })}`)
+    this.consola.debug(`Updated and cached token to ${tokenFile.token}. Valid until ${new Date(tokenFile.validUntil * 1000).toLocaleString('en-GB', { timeZone: process.env.TZ! })}`)
 
     await fsp.writeFile(tokenFilePath, JSON.stringify(tokenFile))
   }
