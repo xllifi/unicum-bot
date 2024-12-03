@@ -97,6 +97,8 @@ await uclient.getOffline().then((val) => {
     tbot.telegram.sendMessage(cachedUsers[allowedUser], escStr(val), { parse_mode: 'MarkdownV2' })
   }
 })
+
 setInterval(async () => {
+  await uclient.getTokenSmart()
   await uclient.getOffline()
-}, 30 * 60 * 1000)
+}, 30 * 60000)
