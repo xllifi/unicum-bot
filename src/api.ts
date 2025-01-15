@@ -177,13 +177,16 @@ export class Client {
   }
 
   async getOffline() {
+    this.consola.start(`Checking for offline machines`)
     const machineInfos: MachineJson[] = await this.getMachineInfos()
     const offlineMachines: MachineJson[] = machineInfos.filter((x) => x.device.status.online === false)
 
     if (offlineMachines.length > 0) {
+      this.consola.debug(`[1/1] Found ${offlineMachines.length} offline machine(s)!`)
       let message = `${offlineMachines.length === 1 ? 'Автомат' : 'Автоматы'} [${offlineMachines.map((x) => x.comment).join(', ')}] оффлайн!`
       this.consola.fail(colors.redBright(message))
       return message
     }
+    this.consola.debug(`[1/1] Found no offline machines!`)
   }
 }
