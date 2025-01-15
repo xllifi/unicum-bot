@@ -28,15 +28,19 @@ export class Client {
     this.consola = consola
   }
 
+  set cookieHeaderSet(token: string) {
+    this.cookieHeader = { Cookie: `nvmc_login=${token}` }
+  }
+
   async init(token?: string): Promise<Client> {
     if (token) {
-      this.tokenStr(token, 0)
+      this.setToken(token, 0)
     } else {
       let smart: { token: string; validUntil?: number } = await this.getTokenSmart()
-      this.tokenStr(smart.token, smart.validUntil)
+      this.setToken(smart.token, smart.validUntil)
     }
 
-    this.cookieHeader = { Cookie: `nvmc_login=${token || this.token}` }
+    this.cookieHeaderSet = token || this.token
     this.consola.debug(`cookieHeader set: ${JSON.stringify(this.cookieHeader)}`)
 
     if (!fs.existsSync(cacheRoot)) {
@@ -108,8 +112,9 @@ export class Client {
     }
   }
 
-  async tokenStr(token: string, validUntil?: number): Promise<void> {
+  async setToken(token: string, validUntil?: number): Promise<void> {
     this.token = token
+    this.cookieHeaderSet = token
 
     let tokenFile: TokenFile = {
       token,
@@ -129,7 +134,7 @@ export class Client {
         }
       })
       .then((res) => res.json())
-    this.tokenStr(resp.user.token)
+    this.setToken(resp.user.token)
 
     await fsp.writeFile(path.resolve(cacheRoot, 'latest_machineinfos.json'), JSON.stringify(resp), { encoding: 'utf8' })
 
@@ -149,7 +154,7 @@ export class Client {
         })
       })
       .then((resp) => resp.json())
-    this.tokenStr(resp.user.token)
+    this.setToken(resp.user.token)
 
     return resp
   }
