@@ -67,7 +67,7 @@ function parseVends(initMessage: string, res: {[key: number]: ProductJson[]}, ma
     let submessage: string = `__*${machineName}:*__\n`
     value.sort((a, b) => parseInt(a.selection, 16) - parseInt(b.selection, 16))
     for (const prod of value) {
-      submessage = submessage + ` • x${prod.vends} [${prod.selection}] ${prod.name} | x${prod.vends}\n`
+      submessage = submessage + ` • ***x${prod.vends}*** \`[${prod.selection}]\` ${prod.name} ***x${prod.vends}**\n`
     }
     message = message + submessage
   }
