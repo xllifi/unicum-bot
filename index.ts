@@ -68,7 +68,7 @@ function parseVends(res: {[key: number]: ProductJson[]}, machineInfos: GetMachin
     value.sort((a, b) => parseInt(a.selection, 16) - parseInt(b.selection, 16))
     let maxlength = value.reduce((acc, cv) => acc > cv.name.length ? acc : cv.name.length, 0)
     for (const prod of value) {
-      submessage = submessage + ` • **x${prod.vends}** \u0060[${prod.selection}] ${prod.name.padEnd(maxlength)}\u0060 **x${prod.vends}**\n`
+      submessage = submessage + ` • ${prod.selection} | \`${prod.name.padEnd(maxlength)}\` **x${prod.vends}**\n`
     }
     messages.push(submessage)
   }
