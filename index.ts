@@ -66,7 +66,7 @@ function parseVends(initMessage: string, res: {[key: number]: ProductJson[]}, ma
     let machineName = machineInfos.machines.find((x) => x.id.toString() === key)!.comment
     let submessage: string = `__*${machineName}:*__\n`
     for (const prod of value) {
-      submessage = submessage + ` • x${prod.vends} [${prod.selection}] ${prod.name}\n`
+      submessage = submessage + ` • x${prod.vends} [${prod.selection}] ${prod.name} | x${prod.vends}\n`
     }
     message = message + submessage
   }
