@@ -135,4 +135,4 @@ await uclient.getOffline().then((val) => {
 setInterval(async () => {
   await uclient.getTokenSmart()
   await uclient.getOffline()
-}, 30 * 60000)
+}, 20 * 60000)
