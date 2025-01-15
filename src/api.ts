@@ -176,6 +176,18 @@ export class Client {
     return ret
   }
 
+  async getCashAmounts(machineInfos?: MachineJson[]): Promise<{[key: number]: number}> {
+    if (!machineInfos) machineInfos = await this.getMachineInfos()
+
+    const ret: {[key: number]: number} = {}
+    for (const machine of machineInfos) {
+      const curstate: CurstateJson = await this.getCurstates(machine.guid)
+      Object.assign(ret, {[machine.id]: curstate.bills/100})
+    }
+
+    return ret
+  }
+
   async getOffline() {
     this.consola.start(`Checking for offline machines`)
     const machineInfos: MachineJson[] = await this.getMachineInfos()

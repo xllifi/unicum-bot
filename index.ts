@@ -30,7 +30,8 @@ const cachedUsers = await fsp.readFile(telegrafUsersPath, { encoding: 'utf8' })
   })
 
 const keyboard = [
-  ['/getvendsover', '/getvendsall']
+  ['/getvendsover', '/getvendsall'],
+  ['/getcashall']
 ]
 
 tbot.start(async (ctx) => {
@@ -118,6 +119,31 @@ tbot.command('getvendsall', async (ctx) => {
     for (const message of messages) {
       ctx.telegram.sendMessage(waitMessage.chat.id, escStr(message), { parse_mode: 'MarkdownV2' })
     }
+  })
+  .catch((err) => {
+    consola.error(err)
+  })
+})
+
+tbot.command('getcashall', async (ctx) => {
+  consola.start(`${ctx.from.username || 'Unknown user'} executed command /getvendsover! Handling...`)
+  if (ctx.chat.id !== cachedUsers[allowedUser]) {
+    consola.fail(`${ctx.from.username || 'Unknown user'} is not allowed. Replying...`)
+    return ctx.reply('Простите, вы нам не подходите')
+  }
+  consola.info(`${ctx.from.username || 'Unknown user'} is allowed. Executing...`)
+  const waitMessage = await ctx.sendMessage('Подождите, собираю данные...')
+  await uclient.getCashAmounts()
+  .then(async (res: { [key: number]: number }) => {
+    const machineInfos: GetMachinesJson = await fsp.readFile(path.resolve(cacheRoot, 'latest_machineinfos.json'), { encoding: 'utf8' }).then((val) => JSON.parse(val))
+
+    let message = ""
+    for (const [id, value] of Object.entries(res)) {
+      let machineName = machineInfos.machines.find((x) => x.id.toString() === id)!.comment
+      message += `__*${machineName}:*__ ${value}\n`
+    }
+    consola.success(`Executed successfulyl and replied to ${ctx.from.username || 'unknown user'}!`)
+    ctx.telegram.editMessageText(waitMessage.chat.id, waitMessage.message_id, undefined, escStr(message), { parse_mode: 'MarkdownV2' })
   })
   .catch((err) => {
     consola.error(err)
