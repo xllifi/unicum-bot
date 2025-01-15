@@ -114,7 +114,7 @@ tbot.command('getvendsall', async (ctx) => {
     let messages = parseVends(res, machineInfos)
     consola.success(`Executed successfulyl and replied to ${ctx.from.username || 'unknown user'}!`)
     ctx.telegram.deleteMessage(waitMessage.chat.id, waitMessage.message_id)
-    for (const message in messages) {
+    for (const message of messages) {
       ctx.telegram.sendMessage(waitMessage.chat.id, escStr(message), { parse_mode: 'MarkdownV2' })
     }
   })
