@@ -8,4 +8,4 @@ EXPOSE 6480
 RUN chown -R node /app
 COPY . .
 USER root
-CMD ["yarn", "tsx", "./dist/index.ts"]
+CMD ["yarn", "tsx", "./index.ts"]
