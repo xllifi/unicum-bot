@@ -30,7 +30,7 @@ const cachedUsers = await fsp.readFile(telegrafUsersPath, { encoding: 'utf8' })
   })
 
 const keyboard = [
-  ['/getvends']
+  ['/getvendsover', '/getvendsall']
 ]
 
 tbot.start(async (ctx) => {
@@ -59,8 +59,22 @@ tbot.start(async (ctx) => {
   }
 })
 
-tbot.command('getvends', async (ctx) => {
-  consola.start(`${ctx.from.username || 'Unknown user'} executed command /getvends! Handling...`)
+function parseVends(initMessage: string, res: {[key: number]: ProductJson[]}, machineInfos: GetMachinesJson) {
+  let message = initMessage
+  for (const [key, value] of Object.entries(res)) {
+    if (value.length <= 0) continue
+    let machineName = machineInfos.machines.find((x) => x.id.toString() === key)!.comment
+    let submessage: string = `__*${machineName}:*__\n`
+    for (const prod of value) {
+      submessage = submessage + ` • x${prod.vends} [${prod.selection}] ${prod.name}\n`
+    }
+    message = message + submessage
+  }
+  return message
+}
+
+tbot.command('getvendsover', async (ctx) => {
+  consola.start(`${ctx.from.username || 'Unknown user'} executed command /getvendsover! Handling...`)
   if (ctx.chat.id !== cachedUsers[allowedUser]) {
     consola.fail(`${ctx.from.username || 'Unknown user'} is not allowed. Replying...`)
     return ctx.reply('Простите, вы нам не подходите')
@@ -69,25 +83,40 @@ tbot.command('getvends', async (ctx) => {
   const waitMessage = await ctx.sendMessage('Подождите, собираю данные...')
   await uclient.getVendsOver(3)
   .then(async (res: { [key: number]: ProductJson[] }) => {
-      const machineInfos: GetMachinesJson = await fsp.readFile(path.resolve(cacheRoot, 'latest_machineinfos.json'), { encoding: 'utf8' }).then((val) => JSON.parse(val))
+    const machineInfos: GetMachinesJson = await fsp.readFile(path.resolve(cacheRoot, 'latest_machineinfos.json'), { encoding: 'utf8' }).then((val) => JSON.parse(val))
 
-      let message: string = 'Ячейки, продавшиеся более 3 раз\n'
-      for (const [key, value] of Object.entries(res)) {
-        if (value.length <= 0) continue
-        let machineName = machineInfos.machines.find((x) => x.id.toString() === key)!.comment
-        let submessage: string = `__*${machineName}:*__\n`
-        for (const prod of value) {
-          submessage = submessage + ` • x${prod.vends} [${prod.selection}] ${prod.name}\n`
-        }
-        message = message + submessage
-      }
-      consola.success(`Executed successfulyl and replied to ${ctx.from.username || 'unknown user'}!`)
-      consola.debug(`Sending message: ${message.replaceAll('\n', '<br>')}`)
-      ctx.telegram.editMessageText(waitMessage.chat.id, waitMessage.message_id, undefined, escStr(message), { parse_mode: 'MarkdownV2' })
-    })
-    .catch((err) => {
-      consola.error(err)
-    })
+    let message: string = 'Ячейки, продавшиеся более 3 раз\n'
+    message = parseVends(message, res, machineInfos)
+    consola.success(`Executed successfulyl and replied to ${ctx.from.username || 'unknown user'}!`)
+    consola.debug(`Sending message: ${message.replaceAll('\n', '<br>')}`)
+    ctx.telegram.editMessageText(waitMessage.chat.id, waitMessage.message_id, undefined, escStr(message), { parse_mode: 'MarkdownV2' })
+  })
+  .catch((err) => {
+    consola.error(err)
+  })
+})
+
+tbot.command('getvendsall', async (ctx) => {
+  consola.start(`${ctx.from.username || 'Unknown user'} executed command /getvendsover! Handling...`)
+  if (ctx.chat.id !== cachedUsers[allowedUser]) {
+    consola.fail(`${ctx.from.username || 'Unknown user'} is not allowed. Replying...`)
+    return ctx.reply('Простите, вы нам не подходите')
+  }
+  consola.info(`${ctx.from.username || 'Unknown user'} is allowed. Executing...`)
+  const waitMessage = await ctx.sendMessage('Подождите, собираю данные...')
+  await uclient.getVendsOver(1)
+  .then(async (res: { [key: number]: ProductJson[] }) => {
+    const machineInfos: GetMachinesJson = await fsp.readFile(path.resolve(cacheRoot, 'latest_machineinfos.json'), { encoding: 'utf8' }).then((val) => JSON.parse(val))
+
+    let message: string = 'Продажи:\n'
+    message = parseVends(message, res, machineInfos)
+    consola.success(`Executed successfulyl and replied to ${ctx.from.username || 'unknown user'}!`)
+    consola.debug(`Sending message: ${message.replaceAll('\n', '<br>')}`)
+    ctx.telegram.editMessageText(waitMessage.chat.id, waitMessage.message_id, undefined, escStr(message), { parse_mode: 'MarkdownV2' })
+  })
+  .catch((err) => {
+    consola.error(err)
+  })
 })
 
 tbot.launch()

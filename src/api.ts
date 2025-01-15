@@ -113,11 +113,11 @@ export class Client {
 
     let tokenFile: TokenFile = {
       token,
-      validUntil: validUntil !== undefined ? validUntil : getUnix() + 39 * 60
+      validUntil: validUntil !== undefined ? validUntil : getUnix() + 30 * 60
     }
     this.consola.debug(`Updated and cached token to ${tokenFile.token}. Valid until ${new Date(tokenFile.validUntil * 1000).toLocaleString('en-GB', { timeZone: process.env.TZ! })}`)
 
-    await fsp.writeFile(tokenFilePath, JSON.stringify(tokenFile))
+    await fsp.writeFile(tokenFilePath, JSON.stringify(tokenFile), { flag: 'w' })
   }
 
   async getMachineInfos(): Promise<MachineJson[]> {
@@ -154,20 +154,24 @@ export class Client {
     return resp
   }
 
-  async getVendsOver(maxVends: number, machineInfos?: MachineJson[]) {
+  async getProductsAll(machineInfos?: MachineJson[]): Promise<{[key: number]: ProductJson[]}> {
     if (!machineInfos) machineInfos = await this.getMachineInfos()
 
-    let ret = {}
+    const ret: {[key: number]: ProductJson[]} = {}
     for (const machine of machineInfos) {
       const curstate: CurstateJson = await this.getCurstates(machine.guid)
-
-      let filteredProducts: ProductJson[] = []
-      for (const product of curstate.products.filter((x) => x.vends >= maxVends)) {
-        filteredProducts.push(product)
-        this.consola.info(`[${machine.comment}] ${product.name} sold ${colors.redBright(product.vends)} time(s)! Check it out!`)
-      }
-      Object.assign(ret, {[machine.id]: filteredProducts})
+      Object.assign(ret, {[machine.id]: curstate.products})
     }
+
+    return ret
+  }
+
+  async getVendsOver(maxVends: number, machineInfos?: MachineJson[]): Promise<{ [key: number]: ProductJson[] }> {
+    if (!machineInfos) machineInfos = await this.getMachineInfos()
+
+    let ret: {[key: number]: ProductJson[]} = await this.getProductsAll()
+    for (const machine in ret)
+      ret[machine] = ret[machine].filter(x => x.vends >= maxVends)
 
     return ret
   }
