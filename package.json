@@ -18,7 +18,6 @@
   },
   "scripts": {
     "dev": "tsx ./index.ts",
-    "dev:watch": "tsx watch ./index.ts",
-    "build": "tsc && node ./dist/index.js"
+    "dev:watch": "tsx watch ./index.ts"
   }
 }

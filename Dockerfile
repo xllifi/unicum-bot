@@ -8,5 +8,4 @@ EXPOSE 6480
 RUN chown -R node /app
 COPY . .
 USER root
-RUN tsc
-CMD ["node", "./dist/index.js"]
+CMD ["tsx", "./dist/index.ts"]
