@@ -113,7 +113,7 @@ export class Client {
 
     let tokenFile: TokenFile = {
       token,
-      validUntil: validUntil !== undefined ? validUntil : getUnix() + 30 * 60
+      validUntil: validUntil !== undefined ? validUntil : getUnix() + 38 * 60
     }
     this.consola.debug(`Updated and cached token to ${tokenFile.token}. Valid until ${new Date(tokenFile.validUntil * 1000).toLocaleString('en-GB', { timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone })}`)
 
