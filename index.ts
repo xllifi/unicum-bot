@@ -59,19 +59,19 @@ tbot.start(async (ctx) => {
   }
 })
 
-function parseVends(initMessage: string, res: {[key: number]: ProductJson[]}, machineInfos: GetMachinesJson) {
-  let message = initMessage
+function parseVends(res: {[key: number]: ProductJson[]}, machineInfos: GetMachinesJson): string[] {
+  let messages: string[] = []
   for (const [key, value] of Object.entries(res)) {
     if (value.length <= 0) continue
     let machineName = machineInfos.machines.find((x) => x.id.toString() === key)!.comment
     let submessage: string = `__*${machineName}:*__\n`
     value.sort((a, b) => parseInt(a.selection, 16) - parseInt(b.selection, 16))
     for (const prod of value) {
-      submessage = submessage + ` • ***x${prod.vends}*** \`[${prod.selection}]\` ${prod.name} ***x${prod.vends}***\n`
+      submessage = submessage + ` • **x${prod.vends}** [${prod.selection}] ${prod.name} **x${prod.vends}**\n`
     }
-    message = message + submessage
+    messages.push(submessage)
   }
-  return message
+  return messages
 }
 
 tbot.command('getvendsover', async (ctx) => {
@@ -86,11 +86,13 @@ tbot.command('getvendsover', async (ctx) => {
   .then(async (res: { [key: number]: ProductJson[] }) => {
     const machineInfos: GetMachinesJson = await fsp.readFile(path.resolve(cacheRoot, 'latest_machineinfos.json'), { encoding: 'utf8' }).then((val) => JSON.parse(val))
 
-    let message: string = 'Ячейки, продавшиеся более 3 раз\n'
-    message = parseVends(message, res, machineInfos)
-    consola.success(`Executed successfulyl and replied to ${ctx.from.username || 'unknown user'}!`)
-    consola.debug(`Sending message: ${message.replaceAll('\n', '<br>')}`)
-    ctx.telegram.editMessageText(waitMessage.chat.id, waitMessage.message_id, undefined, escStr(message), { parse_mode: 'MarkdownV2' })
+    let messages = parseVends(res, machineInfos)
+    consola.success(`Executed successfully and replied to ${ctx.from.username || 'unknown user'}!`)
+    // consola.debug(`Sending message: ${message.replaceAll('\n', '<br>')}`)
+    ctx.telegram.deleteMessage(waitMessage.chat.id, waitMessage.message_id)
+    for (const message in messages) {
+      ctx.telegram.sendMessage(waitMessage.chat.id, escStr(message), { parse_mode: 'MarkdownV2' })
+    }
   })
   .catch((err) => {
     consola.error(err)
@@ -109,11 +111,12 @@ tbot.command('getvendsall', async (ctx) => {
   .then(async (res: { [key: number]: ProductJson[] }) => {
     const machineInfos: GetMachinesJson = await fsp.readFile(path.resolve(cacheRoot, 'latest_machineinfos.json'), { encoding: 'utf8' }).then((val) => JSON.parse(val))
 
-    let message: string = 'Продажи:\n'
-    message = parseVends(message, res, machineInfos)
+    let messages = parseVends(res, machineInfos)
     consola.success(`Executed successfulyl and replied to ${ctx.from.username || 'unknown user'}!`)
-    consola.debug(`Sending message: ${message.replaceAll('\n', '<br>')}`)
-    ctx.telegram.editMessageText(waitMessage.chat.id, waitMessage.message_id, undefined, escStr(message), { parse_mode: 'MarkdownV2' })
+    ctx.telegram.deleteMessage(waitMessage.chat.id, waitMessage.message_id)
+    for (const message in messages) {
+      ctx.telegram.sendMessage(waitMessage.chat.id, escStr(message), { parse_mode: 'MarkdownV2' })
+    }
   })
   .catch((err) => {
     consola.error(err)
