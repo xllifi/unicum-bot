@@ -66,8 +66,9 @@ function parseVends(res: {[key: number]: ProductJson[]}, machineInfos: GetMachin
     let machineName = machineInfos.machines.find((x) => x.id.toString() === key)!.comment
     let submessage: string = `__*${machineName}:*__\n`
     value.sort((a, b) => parseInt(a.selection, 16) - parseInt(b.selection, 16))
+    let maxlength = value.reduce((acc, cv) => acc > cv.name.length ? acc : cv.name.length, 0)
     for (const prod of value) {
-      submessage = submessage + ` • **x${prod.vends}** [${prod.selection}] ${prod.name} **x${prod.vends}**\n`
+      submessage = submessage + ` • **x${prod.vends}** \u0060[${prod.selection}] ${prod.name.padEnd(maxlength)}\u0060 **x${prod.vends}**\n`
     }
     messages.push(submessage)
   }
@@ -88,9 +89,9 @@ tbot.command('getvendsover', async (ctx) => {
 
     let messages = parseVends(res, machineInfos)
     consola.success(`Executed successfully and replied to ${ctx.from.username || 'unknown user'}!`)
-    // consola.debug(`Sending message: ${message.replaceAll('\n', '<br>')}`)
     ctx.telegram.deleteMessage(waitMessage.chat.id, waitMessage.message_id)
-    for (const message in messages) {
+    for (const message of messages) {
+      // consola.debug(`Sending message: ${message.replaceAll('\n', '<br>')}`)
       ctx.telegram.sendMessage(waitMessage.chat.id, escStr(message), { parse_mode: 'MarkdownV2' })
     }
   })

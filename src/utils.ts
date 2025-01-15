@@ -3,5 +3,5 @@ export function getUnix(): number {
 }
 
 export function escStr(str: string) {
-  return str.replace(/([\[\]()~`#+\-=|{}.!])/g, '\\$1')
+  return str.replace(/([\[\]()~#+\-=|{}.!])/g, '\\$1')
 }
