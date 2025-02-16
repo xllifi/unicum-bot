@@ -8,7 +8,7 @@ import path from 'path'
 import { Telegraf } from 'telegraf'
 import { escStr } from './src/utils.js'
 
-const allowedUser = process.env.TELEGRAM_TRUSTED_USERNAME!
+const allowedUsers: string[] = JSON.parse(process.env.TELEGRAM_TRUSTED_USERNAME!)
 
 const consola = createConsola({ formatOptions: { compact: true }, level: 5 })
 consola.info(`Unicum Bot ${colors.redBright(pjson.version)}\n`)
@@ -19,7 +19,7 @@ const tbot: Telegraf = new Telegraf(process.env.TELEGRAM_BOT_TOKEN!)
 consola.log(JSON.stringify(tbot))
 
 const telegrafUsersPath = `${cacheRoot}/telegrafUsers.json`
-const cachedUsers = await fsp.readFile(telegrafUsersPath, { encoding: 'utf8' })
+const cachedUsers: {[key: string]: number} = await fsp.readFile(telegrafUsersPath, { encoding: 'utf8' })
   .then((data) => JSON.parse(data))
   .catch((err) => {
     if (err.code === 'ENOENT') {
@@ -37,7 +37,12 @@ const keyboard = [
 tbot.start(async (ctx) => {
   consola.start(`Received Telegram /start! Handling...`)
   let chatId = ctx.chat.id
-  let userName = ctx.from.username!
+  let userName = ctx.from.username
+
+  if (!userName) {
+    consola.error('No username!!')
+    return
+  }
 
   if (!cachedUsers[userName]) {
     consola.debug(`New userName ${userName} started chat with chatId ${chatId}. Assigning {${userName}: ${chatId}} to cachedUsers and writing to disk`)
@@ -48,10 +53,10 @@ tbot.start(async (ctx) => {
   if (cachedUsers[userName] !== chatId) {
     consola.debug(`userName ${userName} started chat with chatId ${chatId}, but it doesn't match previously saved chatId ${cachedUsers[userName]}. Setting cachedUsers.${userName} = ${chatId} and writing to disk`)
     cachedUsers[userName] = chatId
-    await fsp.writeFile(telegrafUsersPath, cachedUsers, { encoding: 'utf8' })
+    await fsp.writeFile(telegrafUsersPath, JSON.stringify(cachedUsers), { encoding: 'utf8' })
   }
 
-  if (userName === allowedUser) {
+  if (allowedUsers.includes(userName)) {
     consola.debug(`Starter is assigned username! Replying.`)
     ctx.reply('Привет! Теперь буду отправлять сюда статусы.', {reply_markup: {
       keyboard: keyboard,
@@ -76,18 +81,28 @@ function parseVends(res: {[key: number]: ProductJson[]}, machineInfos: GetMachin
   return messages
 }
 
+function checkAllowed(chatid: number, username: string | undefined): boolean {
+  if (!username) return false
+
+  let allowedCaches: number[] = Object.keys(cachedUsers).filter(k => allowedUsers.includes(k)).map(k => cachedUsers[k]);
+  if (!allowedCaches.includes(chatid)) {
+    consola.fail(`${username || 'Unknown user'} is not allowed.`)
+    return false
+  }
+  consola.info(`${username || 'Unknown user'} is allowed.`)
+  return true
+}
+
 tbot.command('getvendsover', async (ctx) => {
   consola.start(`${ctx.from.username || 'Unknown user'} executed command /getvendsover! Handling...`)
-  if (ctx.chat.id !== cachedUsers[allowedUser]) {
-    consola.fail(`${ctx.from.username || 'Unknown user'} is not allowed. Replying...`)
-    return ctx.reply('Простите, вы нам не подходите')
-  }
-  consola.info(`${ctx.from.username || 'Unknown user'} is allowed. Executing...`)
+
   const waitMessage = await ctx.sendMessage('Подождите, собираю данные...')
   await uclient.getVendsOver(3)
   .then(async (res: { [key: number]: ProductJson[] }) => {
     const machineInfos: GetMachinesJson = await fsp.readFile(path.resolve(cacheRoot, 'latest_machineinfos.json'), { encoding: 'utf8' }).then((val) => JSON.parse(val))
-
+    if (!checkAllowed(ctx.chat.id, ctx.from.username)) {
+      return ctx.reply('У вас нет прав!')
+    }
     let messages = parseVends(res, machineInfos)
     consola.success(`Executed successfully and replied to ${ctx.from.username || 'unknown user'}!`)
     ctx.telegram.deleteMessage(waitMessage.chat.id, waitMessage.message_id)
@@ -103,11 +118,9 @@ tbot.command('getvendsover', async (ctx) => {
 
 tbot.command('getvendsall', async (ctx) => {
   consola.start(`${ctx.from.username || 'Unknown user'} executed command /getvendsover! Handling...`)
-  if (ctx.chat.id !== cachedUsers[allowedUser]) {
-    consola.fail(`${ctx.from.username || 'Unknown user'} is not allowed. Replying...`)
-    return ctx.reply('Простите, вы нам не подходите')
+  if (!checkAllowed(ctx.chat.id, ctx.from.username)) {
+    return ctx.reply('У вас нет прав!')
   }
-  consola.info(`${ctx.from.username || 'Unknown user'} is allowed. Executing...`)
   const waitMessage = await ctx.sendMessage('Подождите, собираю данные...')
   await uclient.getVendsOver(1)
   .then(async (res: { [key: number]: ProductJson[] }) => {
@@ -127,11 +140,9 @@ tbot.command('getvendsall', async (ctx) => {
 
 tbot.command('getcashall', async (ctx) => {
   consola.start(`${ctx.from.username || 'Unknown user'} executed command /getvendsover! Handling...`)
-  if (ctx.chat.id !== cachedUsers[allowedUser]) {
-    consola.fail(`${ctx.from.username || 'Unknown user'} is not allowed. Replying...`)
-    return ctx.reply('Простите, вы нам не подходите')
+  if (!checkAllowed(ctx.chat.id, ctx.from.username)) {
+    return ctx.reply('У вас нет прав!')
   }
-  consola.info(`${ctx.from.username || 'Unknown user'} is allowed. Executing...`)
   const waitMessage = await ctx.sendMessage('Подождите, собираю данные...')
   await uclient.getCashAmounts()
   .then(async (res: { [key: number]: number }) => {
@@ -155,8 +166,9 @@ tbot.command('getcashall', async (ctx) => {
 tbot.launch()
 
 await uclient.getOffline().then((val) => {
-  if (cachedUsers[allowedUser] && val) {
-    tbot.telegram.sendMessage(cachedUsers[allowedUser], escStr(val), { parse_mode: 'MarkdownV2' })
+  for (const username of allowedUsers) {
+    if (cachedUsers[username] && val)
+      tbot.telegram.sendMessage(cachedUsers[username], escStr(val), { parse_mode: 'MarkdownV2' })
   }
 })
 
