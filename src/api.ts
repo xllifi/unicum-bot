@@ -14,7 +14,7 @@ type TokenFile = {
 }
 
 const cacheRootCwd = process.env.CACHE_ROOT_DIR!.toString().replace(/^\/+/, '')
-export const cacheRoot = path.resolve(process.env.CACHE_ROOT_CWD === 'true' ? cacheRootCwd : '/'+cacheRootCwd)
+export const cacheRoot = path.resolve(process.env.CACHE_ROOT_CWD === 'true' ? cacheRootCwd : '/' + cacheRootCwd)
 const relativeTime = new RelativeTime()
 const tokenFilePath: string = path.resolve(cacheRoot, `latest_token.json`)
 
@@ -54,23 +54,45 @@ export class Client {
     this.consola.start(`Acquiring token...`)
 
     return new Promise<string>(async (resolve, reject) => {
-      this.consola.debug(colors.gray('[1/2] ') + `Sending request to ${process.env.BASE_HOST}iamrobot.json`)
+      const authUrl = `${process.env.BASE_HOST?.replace(/^(.*?\/.+?\/).*$/, '$1')}n/`
 
-      await ky.post<{ token: string }>(`${process.env.BASE_HOST}iamrobot.json`, {
+      this.consola.debug(colors.gray('[1/2] ') + `Sending request to ${authUrl}`)
+
+      const [login, password] = [process.env.LOGIN_USERNAME, process.env.LOGIN_PASSWORD]
+      if (!login || !password) {
+        reject('Login data not found')
+        return
+      }
+      const urlEncodedFormData = new URLSearchParams()
+      urlEncodedFormData.set('httpauthreqtype', 'G')
+      urlEncodedFormData.set('Login', login)
+      urlEncodedFormData.set('Password', password)
+
+      console.log(urlEncodedFormData)
+
+      await ky
+        .post(authUrl, {
+          body: urlEncodedFormData,
           headers: {
-            'content-type': 'application/json'
-          },
-          body: JSON.stringify({
-            login: process.env.LOGIN_USERNAME,
-            password: process.env.LOGIN_PASSWORD
-          })
+            'Content-Type': 'application/x-www-form-urlencoded',
+          }
         })
         .then(async (res) => {
+          console.log(res.status)
+          console.log(res.headers)
           // Succeeded
           if (res.status === 200) {
             this.consola.debug(colors.gray('[2/2] ') + `Recieved response with code ${res.status}`)
             this.consola.success('Token acquired! Returning it to caller.')
-            resolve((await res.json()).token)
+            const tokenCookie = (await res.headers.getSetCookie()).find((x) => x.match(/^nvmc_login=.*$/))
+            if (!tokenCookie) {
+              reject(`No token in response ${JSON.stringify(res)}`)
+              return
+            }
+            const token = tokenCookie.replace('nvmc_login=', '').replace('; path=/', '')
+            this.consola.info(token)
+
+            resolve(token)
           }
         })
         .catch(async (err: HTTPError) => {
@@ -93,7 +115,8 @@ export class Client {
   async getTokenSmart(): Promise<{ token: string; validUntil?: number }> {
     this.consola.start(`Searching for saved token...`)
 
-    let fileContent: TokenFile = await fsp.readFile(tokenFilePath, { encoding: 'utf8' })
+    let fileContent: TokenFile = await fsp
+      .readFile(tokenFilePath, { encoding: 'utf8' })
       .then((val) => JSON.parse(val))
       .catch((err) => {
         return null
@@ -106,7 +129,7 @@ export class Client {
       }
     }
 
-    this.consola.fail(`Saved token is not okay! ${fileContent ? `Expired ${relativeTime.from(new Date(fileContent.validUntil * 1000))}.` : 'There\'s no token...'}`)
+    this.consola.fail(`Saved token is not okay! ${fileContent ? `Expired ${relativeTime.from(new Date(fileContent.validUntil * 1000))}.` : "There's no token..."}`)
     return {
       token: await this.getTokenApi()
     }
@@ -120,7 +143,9 @@ export class Client {
       token,
       validUntil: validUntil !== undefined ? validUntil : getUnix() + 38 * 60
     }
-    this.consola.debug(`Updated and cached token to ${tokenFile.token}. Valid until ${new Date(tokenFile.validUntil * 1000).toLocaleString('en-GB', { timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone })}`)
+    this.consola.debug(
+      `Updated and cached token to ${tokenFile.token}. Valid until ${new Date(tokenFile.validUntil * 1000).toLocaleString('en-GB', { timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone })}`
+    )
 
     await fsp.writeFile(tokenFilePath, JSON.stringify(tokenFile), { flag: 'w' })
   }
@@ -159,13 +184,13 @@ export class Client {
     return resp
   }
 
-  async getProductsAll(machineInfos?: MachineJson[]): Promise<{[key: number]: ProductJson[]}> {
+  async getProductsAll(machineInfos?: MachineJson[]): Promise<{ [key: number]: ProductJson[] }> {
     if (!machineInfos) machineInfos = await this.getMachineInfos()
 
-    const ret: {[key: number]: ProductJson[]} = {}
+    const ret: { [key: number]: ProductJson[] } = {}
     for (const machine of machineInfos) {
       const curstate: CurstateJson = await this.getCurstates(machine.guid)
-      Object.assign(ret, {[machine.id]: curstate.products})
+      Object.assign(ret, { [machine.id]: curstate.products })
     }
 
     return ret
@@ -174,20 +199,19 @@ export class Client {
   async getVendsOver(maxVends: number, machineInfos?: MachineJson[]): Promise<{ [key: number]: ProductJson[] }> {
     if (!machineInfos) machineInfos = await this.getMachineInfos()
 
-    let ret: {[key: number]: ProductJson[]} = await this.getProductsAll()
-    for (const machine in ret)
-      ret[machine] = ret[machine].filter(x => x.vends >= maxVends)
+    let ret: { [key: number]: ProductJson[] } = await this.getProductsAll()
+    for (const machine in ret) ret[machine] = ret[machine].filter((x) => x.vends >= maxVends)
 
     return ret
   }
 
-  async getCashAmounts(machineInfos?: MachineJson[]): Promise<{[key: number]: number}> {
+  async getCashAmounts(machineInfos?: MachineJson[]): Promise<{ [key: number]: number }> {
     if (!machineInfos) machineInfos = await this.getMachineInfos()
 
-    const ret: {[key: number]: number} = {}
+    const ret: { [key: number]: number } = {}
     for (const machine of machineInfos) {
       const curstate: CurstateJson = await this.getCurstates(machine.guid)
-      Object.assign(ret, {[machine.id]: curstate.bills/100})
+      Object.assign(ret, { [machine.id]: curstate.bills / 100 })
     }
 
     return ret
